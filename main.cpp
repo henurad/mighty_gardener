@@ -4,7 +4,9 @@
 #include <cstdio>
 #include <thread>
 #include <chrono>
+#include <ctime>
 #include "sms_utils.h"
+#include "Relay.h"
 
 SmsModule sms_module;
 
@@ -69,6 +71,32 @@ int main() {
 
     sms_module.Setup(&sp);
     sms_module.SetAction(DoAction);
+
+    // Sun light relay: GPIO 19, active-low. Turns ON nightly from 20:00 to 24:00 (midnight).
+    Relay sun_light_relay(19, true);
+    Relay heater_relay(26, true);
+    std::thread sunRelayThread([&sp, &sun_light_relay, &heater_relay]() {
+        while (sp.isOpen()) {
+            std::time_t t = std::time(nullptr);
+            std::tm local = *std::localtime(&t);
+            int hour = local.tm_hour;
+            if (hour >= 18 && hour < 24) {
+                sun_light_relay.turnOn();
+            } else {
+                sun_light_relay.turnOff();
+            }
+
+            if (hour >= 8 && hour <= 20) {
+		    heater_relay.turnOff();
+	    } else {
+		    heater_relay.turnOn();
+	    }
+
+
+            std::this_thread::sleep_for(std::chrono::seconds(30));
+        }
+    });
+    sunRelayThread.detach();
 
     while (sp.isOpen()) {
         std::this_thread::sleep_for(std::chrono::seconds(1));
