@@ -75,6 +75,7 @@ int main() {
     // Sun light relay: GPIO 19, active-low. Turns ON nightly from 20:00 to 24:00 (midnight).
     Relay sun_light_relay(19, true);
     Relay heater_relay(26, true);
+    Relay watering_relay(6, true);
     std::thread sunRelayThread([&sp, &sun_light_relay, &heater_relay]() {
         while (sp.isOpen()) {
             std::time_t t = std::time(nullptr);
@@ -97,6 +98,21 @@ int main() {
         }
     });
     sunRelayThread.detach();
+
+    // Watering relay: GPIO 13, active-low. Turns ON for 5 minutes every 2 days.
+    std::thread wateringThread([&sp, &watering_relay]() {
+        time_t last_watering = time(nullptr) - 172800; // 2 days ago to trigger immediately
+        while (sp.isOpen()) {
+            if (time(nullptr) - last_watering >= 172800) { // 2 days = 172800 seconds
+                watering_relay.turnOn();
+                std::this_thread::sleep_for(std::chrono::minutes(5));
+                watering_relay.turnOff();
+                last_watering = time(nullptr);
+            }
+            std::this_thread::sleep_for(std::chrono::seconds(30));
+        }
+    });
+    wateringThread.detach();
 
     while (sp.isOpen()) {
         std::this_thread::sleep_for(std::chrono::seconds(1));

@@ -21,6 +21,6 @@ clean:
 	rm -f $(OBJECTS) $(TARGET)
 
 install:
-	cp gardener /usr/bin/
+	cp -f gardener /usr/bin/
 
 .PHONY: all clean
