@@ -8,7 +8,11 @@ void SmsModule::SetAction(void (*action)(std::string, std::string)) {
 
 void SmsModule::Setup(SerialPort* serial_port) {
     this->serial_port = serial_port;
+    network_registered = false;  // Reset flag
     ResetGsm();
+    // Query current network registration status
+    msleep(500);
+    serial_port->print("AT+CREG?\r");
 }
 
 void SmsModule::ParseData(const std::string& buff) {
@@ -86,6 +90,17 @@ void SmsModule::ParseData(const std::string& buff) {
             pending_sms_header_line = line;
             continue;
         }
+
+        if (startsWith(line, "+CCLK:")) {
+            gsm_time = line;
+            waiting_for_time = false;
+            continue;
+        }
+
+        if (startsWith(line, "+CSQ:")) {
+            printf("GSM Signal strength: %s\n", line.c_str());
+            continue;
+        }
     }
 
     if (start < normalized.size()) {
@@ -99,6 +114,8 @@ void SmsModule::ResetGsm() {
 
     sleep(5);
     serial_port->print("AT+CMGF=1\r");
+    msleep(100);
+    serial_port->print("AT+CREG=1\r");  // Enable network registration reporting
     msleep(100);
     serial_port->print("AT+CMGD=1,4\r");
     msleep(100);
@@ -142,13 +159,19 @@ void SmsModule::HandleSmsNotification(const std::string& notification) {
 }
 
 void SmsModule::HandleNetworkRegistration(const std::string& notification) {
+    printf("Received network registration notification: %s\n", notification.c_str());
     std::string payload = trimCopy(notification.substr(std::string("+CREG:").size()));
     auto fields = splitQuotedFields(payload);
+    printf("Parsed fields: %zu\n", fields.size());
     if (fields.size() >= 2) {
         std::string registration_status = trimCopy(fields[1]);
         // registration_status: 0=not registered, 1=registered(home), 2=searching,
         // 3=denied, 4=unknown, 5=registered(roaming)
-        (void)registration_status;
+        printf("GSM Network status: %s (registered: %s)\n", registration_status.c_str(), 
+               (registration_status == "1" || registration_status == "5") ? "YES" : "NO");
+        network_registered = (registration_status == "1" || registration_status == "5");
+    } else {
+        printf("Failed to parse network registration response\n");
     }
 }
 
@@ -235,4 +258,40 @@ void SmsModule::Reply(const std::string& text, const std::string& Phone) {
 
 void SmsModule::Call(const std::string& Phone) {
     serial_port->print("ATD" + Phone + ";\r");
+}
+
+std::string SmsModule::GetTimeFromGsm() {
+    serial_port->print("AT+CLTS=1\r");
+    msleep(500);
+    serial_port->print("AT&W\r");
+    msleep(500);
+    serial_port->print("AT+CFUN=1,1\r");
+    msleep(4000);
+
+    waiting_for_time = true;
+    gsm_time = "";
+    serial_port->print("AT+CCLK?\r");
+    msleep(200);  // Give GSM time to start responding
+    
+    // Wait for response with timeout (up to 10 seconds)
+    for (int i = 0; i < 100 && waiting_for_time; ++i) {
+        msleep(100);
+    }
+    waiting_for_time = false;
+    return gsm_time;
+}
+
+bool SmsModule::IsNetworkRegistered() {
+    return network_registered;
+}
+
+void SmsModule::CheckSignalStrength() {
+    checking_signal = true;
+    serial_port->print("AT+CSQ\r");
+    msleep(200);
+    checking_signal = false;
+}
+
+void SmsModule::QueryNetworkRegistration() {
+    serial_port->print("AT+CREG?\r");
 }

@@ -143,6 +143,11 @@ private:
     std::string pending_sms_header_line;
     std::string partial_line;
 
+    bool waiting_for_time = false;
+    std::string gsm_time = "";
+    bool network_registered = false;
+    bool checking_signal = false;
+
     bool ValidatePhoneNumber(const char* number);
     void ClearSmsState();
     void HandleRing();
@@ -161,6 +166,10 @@ public:
     void ResetGsm();
     void Reply(const std::string& text, const std::string& Phone);
     void Call(const std::string& Phone);
+    std::string GetTimeFromGsm();
+    bool IsNetworkRegistered();
+    void CheckSignalStrength();
+    void QueryNetworkRegistration();
 };
 
 #endif  // HEADER_SMS_UTILS_H_
