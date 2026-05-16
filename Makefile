@@ -1,6 +1,6 @@
 CXX = g++
 CXXFLAGS = -std=c++17 -Wall
-LIBS = -lgpiod
+LIBS = -lgpiod -lpigpio
 SOURCES = main.cpp serial_port.cpp sms_utils.cpp
 OBJECTS = $(SOURCES:.cpp=.o)
 TARGET = gardener

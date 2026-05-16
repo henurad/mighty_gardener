@@ -8,8 +8,12 @@
 #include <thread>
 #include <chrono>
 #include <ctime>
+#include <pigpio.h>
 #include "sms_utils.h"
 #include "Relay.h"
+#include "dht11_sensor.h"
+
+#define DHT_GPIO 4
 
 SmsModule sms_module;
 
@@ -219,6 +223,41 @@ int main() {
         }
     });
     sunRelayThread.detach();
+
+    std::thread dht11_thread([]() {
+        if (gpioInitialise() < 0) {
+            std::cerr << "pigpio initialization failed\n";
+            return 1;
+        }
+
+        DHT11Sensor dht(DHT_GPIO);
+
+        while (true) {
+
+            float temperature = 0;
+            float humidity = 0;
+
+            if (dht.read(temperature, humidity)) {
+
+                std::cout << "Temperature: "
+                        << temperature
+                        << " °C | Humidity: "
+                        << humidity
+                        << " %"
+                        << std::endl;
+
+            } else {
+
+                std::cout << "Failed to read DHT11"
+                        << std::endl;
+            }
+
+            sleep(5);
+        }
+
+        gpioTerminate();
+    });
+    dht11_thread.detach();
 
     while (sp.isOpen()) {
         std::this_thread::sleep_for(std::chrono::seconds(1));
