@@ -1,8 +1,17 @@
 
+#ifdef HAVE_GPIOD
+#include <gpiod.h>
+#endif
+
 class Relay {
 private:
+#ifdef HAVE_GPIOD
     gpiod_chip* chip;
     gpiod_line* line;
+#else
+    void* chip = nullptr;
+    void* line = nullptr;
+#endif
     int pin;
     bool activeLow;
 

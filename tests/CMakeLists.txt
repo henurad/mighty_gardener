@@ -1,13 +1,17 @@
-add_executable(TestSmsUtils)
-target_link_libraries(TestSmsUtils PRIVATE MightyGardenerLib)
-target_sources(TestSmsUtils PRIVATE test-sms-utils.cpp)
+find_package(GTest QUIET)
 
-function(SmsUtilsUnitTest unit)
-    add_test(
-        NAME ${unit}
-        COMMAND TestSmsUtils ${unit}
+if(NOT GTest_FOUND)
+    include(FetchContent)
+    FetchContent_Declare(
+        googletest
+        URL https://github.com/google/googletest/archive/refs/tags/v1.14.0.zip
     )
-endfunction()
+    set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+    FetchContent_MakeAvailable(googletest)
+endif()
 
-# todo: add tests for sms-utils here
-SmsUtilsUnitTest(ValidatePhoneNumber)
+add_executable(TestSmsUtils test-sms-utils.cpp)
+target_link_libraries(TestSmsUtils PRIVATE MightyGardenerLib GTest::gtest_main)
+
+include(GoogleTest)
+gtest_discover_tests(TestSmsUtils)
