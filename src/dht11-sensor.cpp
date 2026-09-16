@@ -5,7 +5,84 @@
 #include <unistd.h>
 #include <iostream>
 
-DHT11Sensor::DHT11Sensor(int gpioPin) : gpio(gpioPin) {}
+DHT11Sensor::DHT11Sensor(int gpioPin)
+    : gpio(gpioPin), initialized(false), monitoring(false) {
+    for (int i = 0; i < 5; i++) {
+        data[i] = 0;
+    }
+}
+
+DHT11Sensor::~DHT11Sensor() {
+    stopMonitoring();
+    join();
+    shutdown();
+}
+
+bool DHT11Sensor::initialize() {
+    if (initialized) {
+        return true;
+    }
+
+    if (gpioInitialise() < 0) {
+        std::cerr << "pigpio initialization failed\n";
+        return false;
+    }
+
+    initialized = true;
+    return true;
+}
+
+void DHT11Sensor::shutdown() {
+    if (initialized) {
+        gpioTerminate();
+        initialized = false;
+    }
+}
+
+void DHT11Sensor::startMonitoring(int intervalSeconds) {
+    if (monitoring.load()) {
+        return;
+    }
+
+    if (!initialize()) {
+        return;
+    }
+
+    monitoring.store(true);
+    dht11_thread = std::thread([this, intervalSeconds]() {
+        this->monitor(intervalSeconds);
+    });
+}
+
+void DHT11Sensor::stopMonitoring() {
+    monitoring.store(false);
+}
+
+void DHT11Sensor::join() {
+    if (dht11_thread.joinable()) {
+        dht11_thread.join();
+    }
+}
+
+void DHT11Sensor::monitor(int intervalSeconds) {
+    while (monitoring.load()) {
+        float temperature = 0.0f;
+        float humidity = 0.0f;
+
+        if (read(temperature, humidity)) {
+            std::cout << "Temperature: "
+                      << temperature
+                      << " °C | Humidity: "
+                      << humidity
+                      << " %"
+                      << std::endl;
+        } else {
+            std::cout << "Failed to read DHT11" << std::endl;
+        }
+
+        sleep(intervalSeconds);
+    }
+}
 
 bool DHT11Sensor::read(float &temperature, float &humidity) {
     for (int i = 0; i < 5; i++)
