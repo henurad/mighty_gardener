@@ -21,6 +21,8 @@ public:
     virtual ~SerialPort();
 
     bool open(const char* device_name, int baud_rate);
+    void Start();
+    void Join();
     ssize_t write(const char* data, size_t size);
     ssize_t write(const std::string& msg);
     ssize_t write(char byte);

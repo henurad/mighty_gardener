@@ -41,6 +41,25 @@ void SerialPort::readLoop() {
     }
 }
 
+void SerialPort::Start() {
+    if (fd < 0) {
+        return;
+    }
+
+    if (running.load()) {
+        return;
+    }
+
+    running = true;
+    readThread = std::thread(&SerialPort::readLoop, this);
+}
+
+void SerialPort::Join() {
+    if (readThread.joinable()) {
+        readThread.join();
+    }
+}
+
 bool SerialPort::open(const char* device_name, int baud_rate) {
     if (fd >= 0) {
         close();
@@ -84,8 +103,7 @@ bool SerialPort::open(const char* device_name, int baud_rate) {
         return false;
     }
 
-    running = true;
-    readThread = std::thread(&SerialPort::readLoop, this);
+    Start();
     return true;
 }
 
@@ -120,9 +138,7 @@ void SerialPort::on_received(const char* data, size_t size) {
 void SerialPort::close() {
     if (running.load()) {
         running = false;
-        if (readThread.joinable()) {
-            readThread.join();
-        }
+        Join();
     }
 
     if (fd >= 0) {

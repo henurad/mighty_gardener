@@ -24,6 +24,8 @@ target_sources(MightyGardenerLib
         relay.cpp
         serial-port.cpp
         sms-utils.cpp
+        sms-manager.cpp
+        sun-relay.cpp
         dht11-sensor.cpp
 
     PUBLIC
@@ -32,6 +34,8 @@ target_sources(MightyGardenerLib
             relay.h
             serial-port.h
             sms-utils.h
+            sms-manager.h
+            sun-relay.h
             dht11-sensor.h
             time-consts.h
             pigpio.h
