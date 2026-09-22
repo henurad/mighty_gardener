@@ -18,7 +18,7 @@
 
 SmsManager* g_sms_manager = nullptr;
 
-class MySerial : public SerialPort {
+class GsmSerialPort : public SerialPort {
     void on_received(const char* data, size_t size) override {
         std::string str(data, size);
         std::printf("%s", str.c_str());
@@ -66,7 +66,7 @@ void DoAction(std::string phoneNumber, std::string msg) {
 }
 
 int main() {
-    MySerial sp;
+    GsmSerialPort sp;
     if (!sp.open((char*)"/dev/serial0", 9600)) {
         return 1;
     }

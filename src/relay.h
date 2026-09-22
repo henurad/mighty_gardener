@@ -1,5 +1,3 @@
-#ifndef RELAY_H_
-#define RELAY_H_
 
 #ifdef HAVE_GPIOD
 #include <gpiod.h>
@@ -23,5 +21,3 @@ public:
     void turnOff();
     ~Relay();
 };
-
-#endif  // RELAY_H_
