@@ -13,5 +13,9 @@ endif()
 add_executable(TestSmsUtils test-sms-utils.cpp)
 target_link_libraries(TestSmsUtils PRIVATE MightyGardenerLib GTest::gtest_main)
 
+add_executable(TestAppConfig test-app-config.cpp)
+target_link_libraries(TestAppConfig PRIVATE MightyGardenerLib GTest::gtest_main)
+
 include(GoogleTest)
 gtest_discover_tests(TestSmsUtils)
+gtest_discover_tests(TestAppConfig)

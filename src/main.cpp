@@ -9,12 +9,11 @@
 #include <chrono>
 #include <ctime>
 
+#include <app-config.h>
 #include <dht11-sensor.h>
 #include <relay.h>
 #include <sms-manager.h>
 #include <sun-relay.h>
-
-#define DHT_GPIO 4
 
 SmsManager* g_sms_manager = nullptr;
 
@@ -66,8 +65,10 @@ void DoAction(std::string phoneNumber, std::string msg) {
 }
 
 int main() {
+    const AppConfig config = LoadAppConfig();
+
     GsmSerialPort sp;
-    if (!sp.open((char*)"/dev/serial0", 9600)) {
+    if (!sp.open((char*)config.serial_port.c_str(), config.baud_rate)) {
         return 1;
     }
 
@@ -77,13 +78,13 @@ int main() {
     sms_manager.SetAction(DoAction);
     sms_manager.RunStartupSync();
 
-    Relay sun_light_relay(19, true);
-    Relay heater_relay(26, true);
-    Relay watering_relay(6, true);
+    Relay sun_light_relay(config.sun_light_relay_gpio, true);
+    Relay heater_relay(config.heater_relay_gpio, true);
+    Relay watering_relay(config.watering_relay_gpio, true);
     SunRelay sun_relay(sp, sun_light_relay, heater_relay, watering_relay);
     sun_relay.Start();
 
-    DHT11Sensor dht(DHT_GPIO);
+    DHT11Sensor dht(config.dht_gpio);
     if (!dht.initialize()) {
         return 1;
     }

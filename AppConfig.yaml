@@ -1,0 +1,6 @@
+serial_port: "/dev/serial0"
+baud_rate: 9600
+dht_gpio: 4
+sun_light_relay_gpio: 19
+heater_relay_gpio: 26
+watering_relay_gpio: 6
