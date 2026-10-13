@@ -1,4 +1,4 @@
-#include <serial-port.h>
+#include <communication/serial-port.h>
 #include <cstring>
 #include <iostream>
 #include <cstdio>
@@ -9,11 +9,11 @@
 #include <chrono>
 #include <ctime>
 
-#include <app-config.h>
-#include <dht11-sensor.h>
-#include <relay.h>
-#include <sms-manager.h>
-#include <sun-relay.h>
+#include <config/app-config.h>
+#include <hardware/dht11-sensor.h>
+#include <hardware/relay.h>
+#include <communication/sms-manager.h>
+#include <control/sun-relay.h>
 
 SmsManager* g_sms_manager = nullptr;
 

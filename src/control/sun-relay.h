@@ -4,8 +4,8 @@
 #include <atomic>
 #include <thread>
 
-#include "relay.h"
-#include "serial-port.h"
+#include "communication/serial-port.h"
+#include "hardware/relay.h"
 
 class SunRelay {
 public:

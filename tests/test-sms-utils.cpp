@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include <sms-utils.h>
+#include <communication/sms-utils.h>
 
 TEST(SmsUtilsTest, ValidatePhoneNumber) {
     SmsModule sms_module;

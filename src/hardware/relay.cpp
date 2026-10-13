@@ -1,4 +1,4 @@
-#include <relay.h>
+#include <hardware/relay.h>
 
 #include <iostream>
 #include <stdexcept>

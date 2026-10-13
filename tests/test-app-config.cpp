@@ -4,7 +4,7 @@
 #include <fstream>
 #include <string>
 
-#include "app-config.h"
+#include "config/app-config.h"
 
 TEST(AppConfigTest, LoadsValuesFromYamlFile) {
     const std::string file_path = "test-app-config.yaml";

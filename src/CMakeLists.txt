@@ -16,32 +16,32 @@ find_library(PIGPIO_LIB NAMES pigpio)
 if(PIGPIO_LIB)
     target_link_libraries(MightyGardenerLib PUBLIC ${PIGPIO_LIB})
 else()
-    target_sources(MightyGardenerLib PUBLIC pigpio-compat.cpp)
+    target_sources(MightyGardenerLib PUBLIC hardware/pigpio-compat.cpp)
 endif()
 
 target_sources(MightyGardenerLib
     PUBLIC
-        relay.cpp
-        serial-port.cpp
-        sms-utils.cpp
-        sms-manager.cpp
-        sun-relay.cpp
-        dht11-sensor.cpp
-        app-config.cpp
+        hardware/relay.cpp
+        communication/serial-port.cpp
+        communication/sms-utils.cpp
+        communication/sms-manager.cpp
+        control/sun-relay.cpp
+        hardware/dht11-sensor.cpp
+        config/app-config.cpp
 
     PUBLIC
         FILE_SET HEADERS
         FILES
-            relay.h
-            serial-port.h
-            sms-utils.h
-            sms-manager.h
-            sun-relay.h
-            dht11-sensor.h
-            time-consts.h
-            pigpio.h
-            mini-yaml.h
-            app-config.h
+            hardware/relay.h
+            hardware/dht11-sensor.h
+            hardware/pigpio.h
+            communication/serial-port.h
+            communication/sms-utils.h
+            communication/sms-manager.h
+            communication/time-consts.h
+            control/sun-relay.h
+            config/mini-yaml.h
+            config/app-config.h
 )
 
 add_executable(MightyGardener main.cpp)

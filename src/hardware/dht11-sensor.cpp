@@ -1,6 +1,6 @@
-#include <dht11-sensor.h>
+#include <hardware/dht11-sensor.h>
 
-#include <pigpio.h>
+#include <hardware/pigpio.h>
 #include <stdint.h>
 #include <unistd.h>
 #include <iostream>
