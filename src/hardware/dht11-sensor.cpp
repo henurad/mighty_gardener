@@ -1,150 +1,159 @@
-#include <hardware/dht11-sensor.h>
+#include "hardware/dht11-sensor.h"
 
-#include <hardware/pigpio.h>
-#include <stdint.h>
 #include <unistd.h>
+
+#include <cstdint>
 #include <iostream>
 
-DHT11Sensor::DHT11Sensor(int gpioPin)
-    : gpio(gpioPin), initialized(false), monitoring(false) {
-    for (int i = 0; i < 5; i++) {
-        data[i] = 0;
-    }
+#include "hardware/pigpio.h"
+
+Dht11Sensor::Dht11Sensor(int gpio_pin)
+    : gpio_(gpio_pin), data_{}, initialized_(false), monitoring_(false) {}
+
+Dht11Sensor::~Dht11Sensor() {
+  StopMonitoring();
+  Join();
+  Shutdown();
 }
 
-DHT11Sensor::~DHT11Sensor() {
-    stopMonitoring();
-    join();
-    shutdown();
-}
-
-bool DHT11Sensor::initialize() {
-    if (initialized) {
-        return true;
-    }
-
-    if (gpioInitialise() < 0) {
-        std::cerr << "pigpio initialization failed\n";
-        return false;
-    }
-
-    initialized = true;
+bool Dht11Sensor::Initialize() {
+  if (initialized_) {
     return true;
+  }
+
+  if (gpioInitialise() < 0) {
+    std::cerr << "pigpio initialization failed\n";
+    return false;
+  }
+
+  initialized_ = true;
+  return true;
 }
 
-void DHT11Sensor::shutdown() {
-    if (initialized) {
-        gpioTerminate();
-        initialized = false;
+void Dht11Sensor::Shutdown() {
+  if (initialized_) {
+    gpioTerminate();
+    initialized_ = false;
+  }
+}
+
+void Dht11Sensor::StartMonitoring(int interval_seconds) {
+  if (monitoring_.load()) {
+    return;
+  }
+
+  if (!Initialize()) {
+    return;
+  }
+
+  monitoring_.store(true);
+  dht11_thread_ = std::thread([this, interval_seconds]() {
+    this->Monitor(interval_seconds);
+  });
+}
+
+void Dht11Sensor::StopMonitoring() { monitoring_.store(false); }
+
+void Dht11Sensor::Join() {
+  if (dht11_thread_.joinable()) {
+    dht11_thread_.join();
+  }
+}
+
+void Dht11Sensor::Monitor(int interval_seconds) {
+  while (monitoring_.load()) {
+    float temperature = 0.0f;
+    float humidity = 0.0f;
+
+    if (Read(temperature, humidity)) {
+      std::cout << "Temperature: " << temperature << " C | Humidity: "
+                << humidity << " %\n";
+    } else {
+      std::cout << "Failed to read DHT11\n";
     }
+
+    sleep(interval_seconds);
+  }
 }
 
-void DHT11Sensor::startMonitoring(int intervalSeconds) {
-    if (monitoring.load()) {
-        return;
+bool Dht11Sensor::Read(float& temperature, float& humidity) {
+  for (int i = 0; i < 5; ++i) {
+    data_[i] = 0;
+  }
+
+  // Send start signal.
+  gpioSetMode(gpio_, PI_OUTPUT);
+  gpioWrite(gpio_, 0);
+  gpioDelay(18000);  // 18 ms
+
+  gpioWrite(gpio_, 1);
+  gpioDelay(40);
+
+  gpioSetMode(gpio_, PI_INPUT);
+
+  // Wait for DHT response.
+  uint32_t timeout = 10000;
+
+  while (gpioRead(gpio_) == 1) {
+    if (--timeout == 0) {
+      return false;
     }
+  }
 
-    if (!initialize()) {
-        return;
+  timeout = 10000;
+  while (gpioRead(gpio_) == 0) {
+    if (--timeout == 0) {
+      return false;
     }
+  }
 
-    monitoring.store(true);
-    dht11_thread = std::thread([this, intervalSeconds]() {
-        this->monitor(intervalSeconds);
-    });
-}
-
-void DHT11Sensor::stopMonitoring() {
-    monitoring.store(false);
-}
-
-void DHT11Sensor::join() {
-    if (dht11_thread.joinable()) {
-        dht11_thread.join();
+  timeout = 10000;
+  while (gpioRead(gpio_) == 1) {
+    if (--timeout == 0) {
+      return false;
     }
-}
+  }
 
-void DHT11Sensor::monitor(int intervalSeconds) {
-    while (monitoring.load()) {
-        float temperature = 0.0f;
-        float humidity = 0.0f;
-
-        if (read(temperature, humidity)) {
-            std::cout << "Temperature: "
-                      << temperature
-                      << " °C | Humidity: "
-                      << humidity
-                      << " %"
-                      << std::endl;
-        } else {
-            std::cout << "Failed to read DHT11" << std::endl;
-        }
-
-        sleep(intervalSeconds);
-    }
-}
-
-bool DHT11Sensor::read(float &temperature, float &humidity) {
-    for (int i = 0; i < 5; i++)
-        data[i] = 0;
-
-    // Send start signal
-    gpioSetMode(gpio, PI_OUTPUT);
-    gpioWrite(gpio, 0);
-    gpioDelay(18000); // 18 ms
-
-    gpioWrite(gpio, 1);
-    gpioDelay(40);
-
-    gpioSetMode(gpio, PI_INPUT);
-
-    // Wait for DHT response
-    uint32_t timeout = 10000;
-
-    while (gpioRead(gpio) == 1)
-        if (--timeout == 0) return false;
-
+  // Read 40 bits.
+  for (int i = 0; i < 40; ++i) {
+    // Wait for LOW.
     timeout = 10000;
-    while (gpioRead(gpio) == 0)
-        if (--timeout == 0) return false;
-
-    timeout = 10000;
-    while (gpioRead(gpio) == 1)
-        if (--timeout == 0) return false;
-
-    // Read 40 bits
-    for (int i = 0; i < 40; i++) {
-
-        // Wait for LOW
-        timeout = 10000;
-        while (gpioRead(gpio) == 0)
-            if (--timeout == 0) return false;
-
-        uint32_t startTick = gpioTick();
-
-        // Wait for HIGH end
-        timeout = 10000;
-        while (gpioRead(gpio) == 1)
-            if (--timeout == 0) return false;
-
-        uint32_t duration = gpioTick() - startTick;
-
-        data[i / 8] <<= 1;
-
-        // >50us means bit 1
-        if (duration > 50)
-            data[i / 8] |= 1;
-    }
-
-    // Verify checksum
-    uint8_t checksum =
-        (data[0] + data[1] + data[2] + data[3]) & 0xFF;
-
-    if (checksum != data[4])
+    while (gpioRead(gpio_) == 0) {
+      if (--timeout == 0) {
         return false;
+      }
+    }
 
-    humidity = data[0];
-    temperature = data[2];
+    const uint32_t start_tick = gpioTick();
 
-    return true;
+    // Wait for HIGH end.
+    timeout = 10000;
+    while (gpioRead(gpio_) == 1) {
+      if (--timeout == 0) {
+        return false;
+      }
+    }
+
+    const uint32_t duration = gpioTick() - start_tick;
+
+    data_[i / 8] <<= 1;
+
+    // >50us means bit 1.
+    if (duration > 50) {
+      data_[i / 8] |= 1;
+    }
+  }
+
+  // Verify checksum.
+  const uint8_t checksum =
+      (data_[0] + data_[1] + data_[2] + data_[3]) & 0xFF;
+
+  if (checksum != data_[4]) {
+    return false;
+  }
+
+  humidity = data_[0];
+  temperature = data_[2];
+
+  return true;
 }

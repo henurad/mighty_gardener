@@ -1,37 +1,42 @@
-#ifndef SERIAL_PORT_H_
-#define SERIAL_PORT_H_
+#ifndef COMMUNICATION_SERIAL_PORT_H_
+#define COMMUNICATION_SERIAL_PORT_H_
+
+#include <termios.h>
+#include <unistd.h>
 
 #include <atomic>
 #include <string>
 #include <thread>
-#include <unistd.h>
-#include <termios.h>
 
 class SerialPort {
-private:
-    int fd;
-    std::atomic<bool> running;
-    std::thread readThread;
+ public:
+  SerialPort();
+  virtual ~SerialPort();
 
-    speed_t getBaud(int baud_rate);
-    void readLoop();
+  SerialPort(const SerialPort&) = delete;
+  SerialPort& operator=(const SerialPort&) = delete;
 
-public:
-    SerialPort();
-    virtual ~SerialPort();
+  bool Open(const char* device_name, int baud_rate);
+  void Start();
+  void Join();
+  ssize_t Write(const char* data, size_t size);
+  ssize_t Write(const std::string& msg);
+  ssize_t Write(char byte);
+  ssize_t Print(const std::string& msg);
+  ssize_t Println(const std::string& msg);
 
-    bool open(const char* device_name, int baud_rate);
-    void Start();
-    void Join();
-    ssize_t write(const char* data, size_t size);
-    ssize_t write(const std::string& msg);
-    ssize_t write(char byte);
-    ssize_t print(const std::string& msg);
-    ssize_t println(const std::string& msg);
+  virtual void OnReceived(const char* data, size_t size);
 
-    virtual void on_received(const char* data, size_t size);
-    void close();
-    bool isOpen() const;
+  void Close();
+  bool IsOpen() const;
+
+ private:
+  speed_t GetBaud(int baud_rate);
+  void ReadLoop();
+
+  int fd_;
+  std::atomic<bool> running_;
+  std::thread read_thread_;
 };
 
-#endif  // SERIAL_PORT_H_
+#endif  // COMMUNICATION_SERIAL_PORT_H_

@@ -1,9 +1,9 @@
-#ifndef HEADER_TIME_CONSTS_H_
-#define HEADER_TIME_CONSTS_H_
+#ifndef COMMUNICATION_TIME_CONSTS_H_
+#define COMMUNICATION_TIME_CONSTS_H_
 
-const unsigned long kSecondsInMilliSeconds = 1000;
-const unsigned long kMinuteInMilliSeconds = 60000;
-const unsigned long kHourInMilliSeconds = 60UL * kMinuteInMilliSeconds;
-const unsigned long kDayInMilliSeconds = 24UL * kHourInMilliSeconds;
+constexpr unsigned long kMillisecondsPerSecond = 1000;
+constexpr unsigned long kMillisecondsPerMinute = 60UL * kMillisecondsPerSecond;
+constexpr unsigned long kMillisecondsPerHour = 60UL * kMillisecondsPerMinute;
+constexpr unsigned long kMillisecondsPerDay = 24UL * kMillisecondsPerHour;
 
-#endif  // HEADER_TIME_CONSTS_H_
+#endif  // COMMUNICATION_TIME_CONSTS_H_

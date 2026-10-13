@@ -1,152 +1,153 @@
-#include "serial-port.h"
+#include "communication/serial-port.h"
 
-#include <cerrno>
-#include <cstring>
 #include <fcntl.h>
-#include <iostream>
 #include <termios.h>
 
-SerialPort::SerialPort() : fd(-1), running(false) {}
+#include <cerrno>
+#include <cstdio>
+#include <cstring>
+#include <iostream>
 
-SerialPort::~SerialPort() {
-    close();
+SerialPort::SerialPort() : fd_(-1), running_(false) {}
+
+SerialPort::~SerialPort() { Close(); }
+
+speed_t SerialPort::GetBaud(int baud_rate) {
+  switch (baud_rate) {
+    case 9600:
+      return B9600;
+    case 19200:
+      return B19200;
+    case 38400:
+      return B38400;
+    case 57600:
+      return B57600;
+    case 115200:
+      return B115200;
+    default:
+      return B9600;
+  }
 }
 
-speed_t SerialPort::getBaud(int baud_rate) {
-    switch (baud_rate) {
-        case 9600: return B9600;
-        case 19200: return B19200;
-        case 38400: return B38400;
-        case 57600: return B57600;
-        case 115200: return B115200;
-        default: return B9600;
-    }
-}
+void SerialPort::ReadLoop() {
+  char buffer[256];
 
-void SerialPort::readLoop() {
-    char buffer[256];
-
-    while (running.load()) {
-        ssize_t n = ::read(fd, buffer, sizeof(buffer));
-        if (n > 0) {
-            on_received(buffer, n);
-        } else if (n == 0) {
-            break;
-        } else {
-            if (errno == EINTR) {
-                continue;
-            }
-            break;
-        }
+  while (running_.load()) {
+    const ssize_t n = ::read(fd_, buffer, sizeof(buffer));
+    if (n > 0) {
+      OnReceived(buffer, n);
+    } else if (n == 0) {
+      break;
+    } else {
+      if (errno == EINTR) {
+        continue;
+      }
+      break;
     }
+  }
 }
 
 void SerialPort::Start() {
-    if (fd < 0) {
-        return;
-    }
+  if (fd_ < 0) {
+    return;
+  }
 
-    if (running.load()) {
-        return;
-    }
+  if (running_.load()) {
+    return;
+  }
 
-    running = true;
-    readThread = std::thread(&SerialPort::readLoop, this);
+  running_ = true;
+  read_thread_ = std::thread(&SerialPort::ReadLoop, this);
 }
 
 void SerialPort::Join() {
-    if (readThread.joinable()) {
-        readThread.join();
-    }
+  if (read_thread_.joinable()) {
+    read_thread_.join();
+  }
 }
 
-bool SerialPort::open(const char* device_name, int baud_rate) {
-    if (fd >= 0) {
-        close();
-    }
+bool SerialPort::Open(const char* device_name, int baud_rate) {
+  if (fd_ >= 0) {
+    Close();
+  }
 
-    fd = ::open(device_name, O_RDWR | O_NOCTTY | O_SYNC);
-    if (fd < 0) {
-        perror("open");
-        return false;
-    }
+  fd_ = ::open(device_name, O_RDWR | O_NOCTTY | O_SYNC);
+  if (fd_ < 0) {
+    std::perror("open");
+    return false;
+  }
 
-    struct termios tty;
-    memset(&tty, 0, sizeof tty);
+  termios tty{};
 
-    if (tcgetattr(fd, &tty) != 0) {
-        perror("tcgetattr");
-        close();
-        return false;
-    }
+  if (tcgetattr(fd_, &tty) != 0) {
+    std::perror("tcgetattr");
+    Close();
+    return false;
+  }
 
-    cfsetospeed(&tty, getBaud(baud_rate));
-    cfsetispeed(&tty, getBaud(baud_rate));
+  cfsetospeed(&tty, GetBaud(baud_rate));
+  cfsetispeed(&tty, GetBaud(baud_rate));
 
-    tty.c_cflag = (tty.c_cflag & ~CSIZE) | CS8;
-    tty.c_iflag &= ~IGNBRK;
-    tty.c_lflag = 0;
-    tty.c_oflag = 0;
+  tty.c_cflag = (tty.c_cflag & ~CSIZE) | CS8;
+  tty.c_iflag &= ~IGNBRK;
+  tty.c_lflag = 0;
+  tty.c_oflag = 0;
 
-    tty.c_cc[VMIN] = 1;
-    tty.c_cc[VTIME] = 0;
+  tty.c_cc[VMIN] = 1;
+  tty.c_cc[VTIME] = 0;
 
-    tty.c_iflag &= ~(IXON | IXOFF | IXANY);
-    tty.c_cflag |= (CLOCAL | CREAD);
-    tty.c_cflag &= ~(PARENB | PARODD);
-    tty.c_cflag &= ~CSTOPB;
-    tty.c_cflag &= ~CRTSCTS;
+  tty.c_iflag &= ~(IXON | IXOFF | IXANY);
+  tty.c_cflag |= (CLOCAL | CREAD);
+  tty.c_cflag &= ~(PARENB | PARODD);
+  tty.c_cflag &= ~CSTOPB;
+  tty.c_cflag &= ~CRTSCTS;
 
-    if (tcsetattr(fd, TCSANOW, &tty) != 0) {
-        perror("tcsetattr");
-        close();
-        return false;
-    }
+  if (tcsetattr(fd_, TCSANOW, &tty) != 0) {
+    std::perror("tcsetattr");
+    Close();
+    return false;
+  }
 
-    Start();
-    return true;
+  Start();
+  return true;
 }
 
-ssize_t SerialPort::write(const char* data, size_t size) {
-    if (fd < 0) return -1;
-    return ::write(fd, data, size);
+ssize_t SerialPort::Write(const char* data, size_t size) {
+  if (fd_ < 0) {
+    return -1;
+  }
+  return ::write(fd_, data, size);
 }
 
-ssize_t SerialPort::write(const std::string& msg) {
-    return write(msg.c_str(), msg.size());
+ssize_t SerialPort::Write(const std::string& msg) {
+  return Write(msg.c_str(), msg.size());
 }
 
-ssize_t SerialPort::write(char byte) {
-    return write(&byte, 1);
+ssize_t SerialPort::Write(char byte) { return Write(&byte, 1); }
+
+ssize_t SerialPort::Print(const std::string& msg) { return Write(msg); }
+
+ssize_t SerialPort::Println(const std::string& msg) {
+  const std::string line = msg + "\r";
+  return Write(line);
 }
 
-ssize_t SerialPort::print(const std::string& msg) {
-    return write(msg);
+void SerialPort::OnReceived(const char* data, size_t size) {
+  std::cout << "Received (" << size << " bytes): ";
+  std::cout.write(data, size);
+  std::cout << std::endl;
 }
 
-ssize_t SerialPort::println(const std::string& msg) {
-    std::string line = msg + "\r";
-    return write(line);
+void SerialPort::Close() {
+  if (running_.load()) {
+    running_ = false;
+    Join();
+  }
+
+  if (fd_ >= 0) {
+    ::close(fd_);
+    fd_ = -1;
+  }
 }
 
-void SerialPort::on_received(const char* data, size_t size) {
-    std::cout << "Received (" << size << " bytes): ";
-    std::cout.write(data, size);
-    std::cout << std::endl;
-}
-
-void SerialPort::close() {
-    if (running.load()) {
-        running = false;
-        Join();
-    }
-
-    if (fd >= 0) {
-        ::close(fd);
-        fd = -1;
-    }
-}
-
-bool SerialPort::isOpen() const {
-    return fd >= 0;
-}
+bool SerialPort::IsOpen() const { return fd_ >= 0; }

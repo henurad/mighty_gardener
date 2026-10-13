@@ -1,6 +1,11 @@
+# Connections
 serial_port: "/dev/serial0"
 baud_rate: 9600
+
+# Sensors
 dht_gpio: 4
+
+# Actuators
 sun_light_relay_gpio: 19
 heater_relay_gpio: 26
 watering_relay_gpio: 6

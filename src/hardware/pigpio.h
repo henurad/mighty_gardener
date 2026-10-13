@@ -1,4 +1,5 @@
-#pragma once
+#ifndef HARDWARE_PIGPIO_H_
+#define HARDWARE_PIGPIO_H_
 
 #include <stdint.h>
 
@@ -33,3 +34,5 @@ uint32_t gpioTick(void);
 #ifdef __cplusplus
 }
 #endif
+
+#endif  // HARDWARE_PIGPIO_H_

@@ -1,5 +1,5 @@
-#ifndef RELAY_SCHEDULER_H_
-#define RELAY_SCHEDULER_H_
+#ifndef CONTROL_RELAY_SCHEDULER_H_
+#define CONTROL_RELAY_SCHEDULER_H_
 
 #include <atomic>
 #include <thread>
@@ -8,25 +8,26 @@
 #include "hardware/relay.h"
 
 class RelayScheduler {
-public:
-    RelayScheduler(SerialPort& serial_port,
-             Relay& sun_light_relay,
-             Relay& heater_relay,
-             Relay& watering_relay);
-    ~RelayScheduler();
+ public:
+  RelayScheduler(SerialPort& serial_port, Relay& sun_light_relay,
+                 Relay& heater_relay, Relay& watering_relay);
+  ~RelayScheduler();
 
-    void Start();
-    void Join();
+  RelayScheduler(const RelayScheduler&) = delete;
+  RelayScheduler& operator=(const RelayScheduler&) = delete;
 
-private:
-    void Run();
+  void Start();
+  void Join();
 
-    SerialPort& serial_port_;
-    Relay& sun_light_relay_;
-    Relay& heater_relay_;
-    Relay& watering_relay_;
-    std::atomic<bool> running_{false};
-    std::thread worker_;
+ private:
+  void Run();
+
+  SerialPort& serial_port_;
+  Relay& sun_light_relay_;
+  Relay& heater_relay_;
+  Relay& watering_relay_;
+  std::atomic<bool> running_{false};
+  std::thread worker_;
 };
 
-#endif  // RELAY_SCHEDULER_H_
+#endif  // CONTROL_RELAY_SCHEDULER_H_

@@ -1,27 +1,31 @@
-#ifndef RELAY_H_
-#define RELAY_H_
+#ifndef HARDWARE_RELAY_H_
+#define HARDWARE_RELAY_H_
 
 #ifdef HAVE_GPIOD
 #include <gpiod.h>
 #endif
 
 class Relay {
-private:
-#ifdef HAVE_GPIOD
-    gpiod_chip* chip;
-    gpiod_line* line;
-#else
-    void* chip = nullptr;
-    void* line = nullptr;
-#endif
-    int pin;
-    bool activeLow;
+ public:
+  Relay(int gpio_pin, bool active_low);
+  ~Relay();
 
-public:
-    Relay(int gpioPin, bool active_low);
-    void turnOn();
-    void turnOff();
-    ~Relay();
+  Relay(const Relay&) = delete;
+  Relay& operator=(const Relay&) = delete;
+
+  void TurnOn();
+  void TurnOff();
+
+ private:
+#ifdef HAVE_GPIOD
+  gpiod_chip* chip_ = nullptr;
+  gpiod_line* line_ = nullptr;
+#else
+  void* chip_ = nullptr;
+  void* line_ = nullptr;
+#endif
+  int pin_;
+  bool active_low_;
 };
 
-#endif  // RELAY_H_
+#endif  // HARDWARE_RELAY_H_

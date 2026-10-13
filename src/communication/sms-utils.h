@@ -1,166 +1,55 @@
-#ifndef HEADER_SMS_UTILS_H_
-#define HEADER_SMS_UTILS_H_
+#ifndef COMMUNICATION_SMS_UTILS_H_
+#define COMMUNICATION_SMS_UTILS_H_
 
-#include "time-consts.h"
-#include "serial-port.h"
-#include <unistd.h>
-#include <algorithm>
-#include <cctype>
-#include <cstring>
-#include <fstream>
 #include <string>
-#include <vector>
 
-inline std::string trimCopy(const std::string& value) {
-    auto start = value.find_first_not_of(" \t\r\n");
-    if (start == std::string::npos) {
-        return "";
-    }
-    auto end = value.find_last_not_of(" \t\r\n");
-    return value.substr(start, end - start + 1);
-}
+#include "communication/serial-port.h"
 
-inline void trim(std::string& value) {
-    value = trimCopy(value);
-}
+class SmsModule {
+ public:
+  using ActionCallback = void (*)(const std::string& phone_number,
+                                  const std::string& msg);
 
-inline void toLowerCase(std::string& value) {
-    std::transform(value.begin(), value.end(), value.begin(), [](unsigned char c) {
-        return static_cast<char>(std::tolower(c));
-    });
-}
+  bool ValidatePhoneNumber(const char* number);
 
-inline bool startsWith(const std::string& value, const std::string& prefix) {
-    return value.size() >= prefix.size() && value.compare(0, prefix.size(), prefix) == 0;
-}
+  void Setup(SerialPort* serial_port);
+  void SetAction(ActionCallback action);
+  void ParseData(const std::string& data);
+  void ResetGsm();
+  void Reply(const std::string& text, const std::string& phone_number);
+  void Call(const std::string& phone_number);
+  std::string GetTimeFromGsm();
+  bool IsNetworkRegistered();
+  void CheckSignalStrength();
+  void QueryNetworkRegistration();
 
-inline std::vector<std::string> splitQuotedFields(const std::string& value) {
-    std::vector<std::string> fields;
-    std::string current;
-    bool inQuotes = false;
+ private:
+  static constexpr int kPhoneNumberSize = 13;
+  static constexpr int kTotalPhoneNumbers = 1;
 
-    for (char c : value) {
-        if (c == '"') {
-            if (inQuotes) {
-                fields.push_back(current);
-                current.clear();
-            }
-            inQuotes = !inQuotes;
-            continue;
-        }
+  void ClearSmsState();
+  void HandleRing();
+  void HandleSmsNotification(const std::string& notification);
+  void HandleNetworkRegistration(const std::string& notification);
+  bool ParseSmsHeaderAndBody(const std::string& header,
+                             const std::string& body);
+  void HandleSmsPayload(const std::string& header, const std::string& body);
 
-        if (!inQuotes && c == ',') {
-            if (!current.empty()) {
-                trim(current);
-                fields.push_back(current);
-                current.clear();
-            }
-            continue;
-        }
+  SerialPort* serial_port_ = nullptr;
+  ActionCallback do_action_ = nullptr;
 
-        current.push_back(c);
-    }
+  std::string sender_number_;
+  std::string msg_;
+  bool pending_sms_header_ = false;
+  std::string pending_sms_header_line_;
+  std::string partial_line_;
 
-    if (!current.empty()) {
-        trim(current);
-        fields.push_back(current);
-    }
+  bool waiting_for_time_ = false;
+  std::string gsm_time_;
+  bool network_registered_ = false;
 
-    return fields;
-}
-
-inline bool fileExists(const std::string& path) {
-    return access(path.c_str(), F_OK) == 0;
-}
-
-inline bool writeFile(const std::string& path, const std::string& content) {
-    std::ofstream out(path);
-    if (!out.is_open()) {
-        return false;
-    }
-    out << content;
-    return true;
-}
-
-inline std::string readFile(const std::string& path) {
-    std::ifstream in(path);
-    if (!in.is_open()) {
-        return "";
-    }
-    std::string value;
-    std::getline(in, value);
-    return value;
-}
-
-inline bool ensureGpioExported(int pin) {
-    std::string gpioPath = "/sys/class/gpio/gpio" + std::to_string(pin);
-    if (fileExists(gpioPath)) {
-        return true;
-    }
-    return writeFile("/sys/class/gpio/export", std::to_string(pin));
-}
-
-inline bool setGpioDirection(int pin, const std::string& direction) {
-    std::string path = "/sys/class/gpio/gpio" + std::to_string(pin) + "/direction";
-    return writeFile(path, direction);
-}
-
-inline bool digitalRead(int pin) {
-    if (!ensureGpioExported(pin)) {
-        return false;
-    }
-    setGpioDirection(pin, "in");
-    std::string path = "/sys/class/gpio/gpio" + std::to_string(pin) + "/value";
-    std::string value = readFile(path);
-    return value == "1";
-}
-
-inline void msleep(int milliseconds) {
-    usleep(milliseconds * 1000);
-}
-
-struct SmsModule {
-private:
-    SerialPort* serial_port;
-    const int kTotalPhoneNo = 1;
-    const int kGsmResetPin = 4;
-    static const int kPhoneNumberSize = 13;
-    void (*do_action)(std::string phone_number, std::string msg) = nullptr;
-
-    std::string sms_status = "";
-    std::string sender_number = "";
-    std::string recieved_date = "";
-    std::string msg = "";
-    bool pending_sms_header = false;
-    std::string pending_sms_header_line;
-    std::string partial_line;
-
-    bool waiting_for_time = false;
-    std::string gsm_time = "";
-    bool network_registered = false;
-    bool checking_signal = false;
-
-    void ClearSmsState();
-    void HandleRing();
-    void HandleSmsNotification(const std::string& notification);
-    void HandleNetworkRegistration(const std::string& notification);
-    void HandleClip(const std::string& notification);
-    bool ParseSmsHeaderAndBody(const std::string& header, const std::string& body);
-    void HandleSmsPayload(const std::string& header, const std::string& body);
-public:
-    bool ValidatePhoneNumber(const char* number);
-    char phone_numbers[1][kPhoneNumberSize + 1] = {"+989027732097"};
-    
-    void Setup(SerialPort* serial_port);
-    void SetAction(void (*action)(std::string, std::string));
-    void ParseData(const std::string& buff);
-    void ResetGsm();
-    void Reply(const std::string& text, const std::string& Phone);
-    void Call(const std::string& Phone);
-    std::string GetTimeFromGsm();
-    bool IsNetworkRegistered();
-    void CheckSignalStrength();
-    void QueryNetworkRegistration();
+  char phone_numbers_[kTotalPhoneNumbers][kPhoneNumberSize + 1] = {
+      "+989027732097"};
 };
 
-#endif  // HEADER_SMS_UTILS_H_
+#endif  // COMMUNICATION_SMS_UTILS_H_
