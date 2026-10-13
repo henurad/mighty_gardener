@@ -1,5 +1,5 @@
-#ifndef SUN_RELAY_H_
-#define SUN_RELAY_H_
+#ifndef RELAY_SCHEDULER_H_
+#define RELAY_SCHEDULER_H_
 
 #include <atomic>
 #include <thread>
@@ -7,13 +7,13 @@
 #include "communication/serial-port.h"
 #include "hardware/relay.h"
 
-class SunRelay {
+class RelayScheduler {
 public:
-    SunRelay(SerialPort& serial_port,
+    RelayScheduler(SerialPort& serial_port,
              Relay& sun_light_relay,
              Relay& heater_relay,
              Relay& watering_relay);
-    ~SunRelay();
+    ~RelayScheduler();
 
     void Start();
     void Join();
@@ -29,4 +29,4 @@ private:
     std::thread worker_;
 };
 
-#endif  // SUN_RELAY_H_
+#endif  // RELAY_SCHEDULER_H_

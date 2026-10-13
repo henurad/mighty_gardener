@@ -1,9 +1,9 @@
-#include "sun-relay.h"
+#include "relay-scheduler.h"
 
 #include <chrono>
 #include <ctime>
 
-SunRelay::SunRelay(SerialPort& serial_port,
+RelayScheduler::RelayScheduler(SerialPort& serial_port,
                  Relay& sun_light_relay,
                  Relay& heater_relay,
                  Relay& watering_relay)
@@ -12,27 +12,27 @@ SunRelay::SunRelay(SerialPort& serial_port,
       heater_relay_(heater_relay),
       watering_relay_(watering_relay) {}
 
-SunRelay::~SunRelay() {
+RelayScheduler::~RelayScheduler() {
     running_.store(false);
     Join();
 }
 
-void SunRelay::Start() {
+void RelayScheduler::Start() {
     if (running_.load()) {
         return;
     }
 
     running_.store(true);
-    worker_ = std::thread(&SunRelay::Run, this);
+    worker_ = std::thread(&RelayScheduler::Run, this);
 }
 
-void SunRelay::Join() {
+void RelayScheduler::Join() {
     if (worker_.joinable()) {
         worker_.join();
     }
 }
 
-void SunRelay::Run() {
+void RelayScheduler::Run() {
     while (running_.load() && serial_port_.isOpen()) {
         std::time_t t = std::time(nullptr);
         std::tm local = *std::localtime(&t);

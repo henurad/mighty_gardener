@@ -13,7 +13,7 @@
 #include <hardware/dht11-sensor.h>
 #include <hardware/relay.h>
 #include <communication/sms-manager.h>
-#include <control/sun-relay.h>
+#include <control/relay-scheduler.h>
 
 SmsManager* g_sms_manager = nullptr;
 
@@ -81,8 +81,8 @@ int main() {
     Relay sun_light_relay(config.sun_light_relay_gpio, true);
     Relay heater_relay(config.heater_relay_gpio, true);
     Relay watering_relay(config.watering_relay_gpio, true);
-    SunRelay sun_relay(sp, sun_light_relay, heater_relay, watering_relay);
-    sun_relay.Start();
+    RelayScheduler relay_scheduler(sp, sun_light_relay, heater_relay, watering_relay);
+    relay_scheduler.Start();
 
     DHT11Sensor dht(config.dht_gpio);
     if (!dht.initialize()) {
@@ -98,7 +98,7 @@ int main() {
     dht.stopMonitoring();
     dht.join();
     dht.shutdown();
-    sun_relay.Join();
+    relay_scheduler.Join();
 
     g_sms_manager = nullptr;
     return 0;

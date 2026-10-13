@@ -25,7 +25,7 @@ target_sources(MightyGardenerLib
         communication/serial-port.cpp
         communication/sms-utils.cpp
         communication/sms-manager.cpp
-        control/sun-relay.cpp
+        control/relay-scheduler.cpp
         hardware/dht11-sensor.cpp
         config/app-config.cpp
 
@@ -39,7 +39,7 @@ target_sources(MightyGardenerLib
             communication/sms-utils.h
             communication/sms-manager.h
             communication/time-consts.h
-            control/sun-relay.h
+            control/relay-scheduler.h
             config/mini-yaml.h
             config/app-config.h
 )
