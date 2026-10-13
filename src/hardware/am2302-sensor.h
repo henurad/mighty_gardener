@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <thread>
 
+/// @todo: Test this module
 class Am2302Sensor {
  public:
   explicit Am2302Sensor(int gpio_pin);
