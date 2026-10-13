@@ -16,6 +16,11 @@ target_link_libraries(TestSmsUtils PRIVATE MightyGardenerLib GTest::gtest_main)
 add_executable(TestAppConfig test-app-config.cpp)
 target_link_libraries(TestAppConfig PRIVATE MightyGardenerLib GTest::gtest_main)
 
+add_executable(TestSoilMoistureSensor test-soil-moisture-sensor.cpp)
+target_link_libraries(TestSoilMoistureSensor PRIVATE MightyGardenerLib
+    GTest::gtest_main)
+
 include(GoogleTest)
 gtest_discover_tests(TestSmsUtils)
 gtest_discover_tests(TestAppConfig)
+gtest_discover_tests(TestSoilMoistureSensor)

@@ -10,10 +10,12 @@
 #include "control/relay-scheduler.h"
 #include "hardware/dht11-sensor.h"
 #include "hardware/relay.h"
+#include "hardware/soil-moisture-sensor.h"
 
 namespace {
 
 SmsManager* g_sms_manager = nullptr;
+SoilMoistureSensor* g_soil_sensor = nullptr;
 
 class GsmSerialPort : public SerialPort {
  public:
@@ -22,6 +24,15 @@ class GsmSerialPort : public SerialPort {
     std::printf("%s", str.c_str());
     if (g_sms_manager != nullptr) {
       g_sms_manager->ParseData(str);
+    }
+  }
+};
+
+class SoilSerialPort : public SerialPort {
+ public:
+  void OnReceived(const char* data, size_t size) override {
+    if (g_soil_sensor != nullptr) {
+      g_soil_sensor->ParseData(std::string(data, size));
     }
   }
 };
@@ -94,6 +105,22 @@ int main() {
 
   dht.StartMonitoring(5);
 
+  SoilSerialPort soil_serial_port;
+  SoilMoistureSensor soil_sensor(&soil_serial_port,
+                                 config.soil_moisture_raw_dry,
+                                 config.soil_moisture_raw_wet);
+  bool soil_enabled = false;
+  if (!config.soil_moisture_serial_port.empty()) {
+    g_soil_sensor = &soil_sensor;
+    if (soil_serial_port.Open(config.soil_moisture_serial_port.c_str(),
+                              config.soil_moisture_baud_rate)) {
+      soil_sensor.StartMonitoring(5);
+      soil_enabled = true;
+    } else {
+      g_soil_sensor = nullptr;
+    }
+  }
+
   while (serial_port.IsOpen()) {
     std::this_thread::sleep_for(std::chrono::seconds(1));
   }
@@ -101,6 +128,13 @@ int main() {
   dht.StopMonitoring();
   dht.Join();
   dht.Shutdown();
+
+  if (soil_enabled) {
+    soil_sensor.StopMonitoring();
+    soil_sensor.Join();
+    soil_serial_port.Close();
+  }
+  g_soil_sensor = nullptr;
   relay_scheduler.Join();
 
   g_sms_manager = nullptr;

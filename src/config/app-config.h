@@ -7,6 +7,10 @@ struct AppConfig {
   std::string serial_port = "/dev/serial0";
   int baud_rate = 9600;
   int dht_gpio = 4;
+  std::string soil_moisture_serial_port = "";
+  int soil_moisture_baud_rate = 9600;
+  int soil_moisture_raw_dry = 1023;
+  int soil_moisture_raw_wet = 0;
   int sun_light_relay_gpio = 19;
   int heater_relay_gpio = 26;
   int watering_relay_gpio = 6;

@@ -4,6 +4,12 @@ baud_rate: 9600
 
 # Sensors
 dht_gpio: 4
+# Soil moisture probe read via an ATtiny over UART. Leave empty to disable.
+soil_moisture_serial_port: ""
+soil_moisture_baud_rate: 9600
+# Raw ATtiny ADC values calibrated for dry air and submerged in water.
+soil_moisture_raw_dry: 1023
+soil_moisture_raw_wet: 0
 
 # Actuators
 sun_light_relay_gpio: 19
