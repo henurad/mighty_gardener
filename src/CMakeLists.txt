@@ -30,6 +30,7 @@ target_sources(MightyGardenerLib
         hardware/am2302-sensor.cpp
         hardware/yf-s201.cpp
         hardware/soil-moisture-sensor.cpp
+        hardware/light-sensor.cpp
         config/app-config.cpp
 
     PUBLIC
@@ -40,6 +41,7 @@ target_sources(MightyGardenerLib
             hardware/am2302-sensor.h
             hardware/yf-s201.h
             hardware/soil-moisture-sensor.h
+            hardware/light-sensor.h
             hardware/pigpio.h
             communication/serial-port.h
             communication/sms-utils.h

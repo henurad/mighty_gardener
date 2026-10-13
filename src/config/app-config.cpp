@@ -81,6 +81,14 @@ AppConfig LoadAppConfig(const std::string& config_path) {
       values, "SOIL_MOISTURE_RAW_DRY", config.soil_moisture_raw_dry);
   config.soil_moisture_raw_wet = ReadIntValue(
       values, "SOIL_MOISTURE_RAW_WET", config.soil_moisture_raw_wet);
+  config.light_serial_port =
+      ReadStringValue(values, "LIGHT_SERIAL_PORT", config.light_serial_port);
+  config.light_baud_rate =
+      ReadIntValue(values, "LIGHT_BAUD_RATE", config.light_baud_rate);
+  config.light_raw_dark =
+      ReadIntValue(values, "LIGHT_RAW_DARK", config.light_raw_dark);
+  config.light_raw_bright =
+      ReadIntValue(values, "LIGHT_RAW_BRIGHT", config.light_raw_bright);
   config.sun_light_relay_gpio =
       ReadIntValue(values, "SUN_LIGHT_RELAY_GPIO", config.sun_light_relay_gpio);
   config.heater_relay_gpio =

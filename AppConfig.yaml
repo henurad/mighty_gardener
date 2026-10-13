@@ -11,6 +11,14 @@ soil_moisture_baud_rate: 9600
 soil_moisture_raw_dry: 1023
 soil_moisture_raw_wet: 0
 
+# Light sensor (LDR / photoresistor) read via an ATtiny over UART. Leave empty
+# to disable.
+light_serial_port: ""
+light_baud_rate: 9600
+# Raw ATtiny ADC values calibrated for darkness and full brightness.
+light_raw_dark: 0
+light_raw_bright: 1023
+
 # Actuators
 sun_light_relay_gpio: 19
 heater_relay_gpio: 26

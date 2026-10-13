@@ -9,6 +9,7 @@
 #include "config/app-config.h"
 #include "control/relay-scheduler.h"
 #include "hardware/dht11-sensor.h"
+#include "hardware/light-sensor.h"
 #include "hardware/relay.h"
 #include "hardware/soil-moisture-sensor.h"
 
@@ -16,6 +17,7 @@ namespace {
 
 SmsManager* g_sms_manager = nullptr;
 SoilMoistureSensor* g_soil_sensor = nullptr;
+LightSensor* g_light_sensor = nullptr;
 
 class GsmSerialPort : public SerialPort {
  public:
@@ -33,6 +35,15 @@ class SoilSerialPort : public SerialPort {
   void OnReceived(const char* data, size_t size) override {
     if (g_soil_sensor != nullptr) {
       g_soil_sensor->ParseData(std::string(data, size));
+    }
+  }
+};
+
+class LightSerialPort : public SerialPort {
+ public:
+  void OnReceived(const char* data, size_t size) override {
+    if (g_light_sensor != nullptr) {
+      g_light_sensor->ParseData(std::string(data, size));
     }
   }
 };
@@ -121,6 +132,21 @@ int main() {
     }
   }
 
+  LightSerialPort light_serial_port;
+  LightSensor light_sensor(&light_serial_port, config.light_raw_dark,
+                           config.light_raw_bright);
+  bool light_enabled = false;
+  if (!config.light_serial_port.empty()) {
+    g_light_sensor = &light_sensor;
+    if (light_serial_port.Open(config.light_serial_port.c_str(),
+                               config.light_baud_rate)) {
+      light_sensor.StartMonitoring(5);
+      light_enabled = true;
+    } else {
+      g_light_sensor = nullptr;
+    }
+  }
+
   while (serial_port.IsOpen()) {
     std::this_thread::sleep_for(std::chrono::seconds(1));
   }
@@ -135,6 +161,13 @@ int main() {
     soil_serial_port.Close();
   }
   g_soil_sensor = nullptr;
+
+  if (light_enabled) {
+    light_sensor.StopMonitoring();
+    light_sensor.Join();
+    light_serial_port.Close();
+  }
+  g_light_sensor = nullptr;
   relay_scheduler.Join();
 
   g_sms_manager = nullptr;
