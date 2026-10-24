@@ -26,6 +26,7 @@ target_sources(MightyGardenerLib
         communication/sms-utils.cpp
         communication/sms-manager.cpp
         control/relay-scheduler.cpp
+        control/schmitt-trigger-relay.cpp
         hardware/dht11-sensor.cpp
         hardware/am2302-sensor.cpp
         hardware/yf-s201.cpp
@@ -48,6 +49,7 @@ target_sources(MightyGardenerLib
             communication/sms-manager.h
             communication/time-consts.h
             control/relay-scheduler.h
+            control/schmitt-trigger-relay.h
             config/mini-yaml.h
             config/app-config.h
 )

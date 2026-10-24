@@ -24,8 +24,13 @@ add_executable(TestLightSensor test-light-sensor.cpp)
 target_link_libraries(TestLightSensor PRIVATE MightyGardenerLib
     GTest::gtest_main)
 
+add_executable(TestSchmittTriggerRelay test-schmitt-trigger-relay.cpp)
+target_link_libraries(TestSchmittTriggerRelay PRIVATE MightyGardenerLib
+    GTest::gtest_main)
+
 include(GoogleTest)
 gtest_discover_tests(TestSmsUtils)
 gtest_discover_tests(TestAppConfig)
 gtest_discover_tests(TestSoilMoistureSensor)
 gtest_discover_tests(TestLightSensor)
+gtest_discover_tests(TestSchmittTriggerRelay)
