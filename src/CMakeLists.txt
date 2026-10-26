@@ -17,18 +17,16 @@ if(GPIOD_FOUND)
 endif()
 
 find_library(PIGPIO_LIB NAMES pigpio)
-if(PIGPIO_LIB)
-    target_link_libraries(MightyGardenerLib PUBLIC ${PIGPIO_LIB})
-endif()
+find_path(PIGPIO_INCLUDE_DIR NAMES pigpio.h)
 
 if(MIGHTY_GARDENER_REQUIRE_HARDWARE AND NOT GPIOD_FOUND)
     message(FATAL_ERROR
         "libgpiod was not found. Install libgpiod-dev for Raspberry Pi GPIO support.")
 endif()
 
-if(MIGHTY_GARDENER_REQUIRE_HARDWARE AND NOT PIGPIO_LIB)
+if(MIGHTY_GARDENER_REQUIRE_HARDWARE AND (NOT PIGPIO_LIB OR NOT PIGPIO_INCLUDE_DIR))
     message(FATAL_ERROR
-        "pigpio was not found. Install libpigpio-dev for Raspberry Pi sensor support.")
+        "pigpio headers or library were not found. Install libpigpio-dev for Raspberry Pi sensor support.")
 endif()
 
 target_sources(MightyGardenerLib
@@ -39,9 +37,6 @@ target_sources(MightyGardenerLib
         communication/sms-manager.cpp
         control/relay-scheduler.cpp
         control/schmitt-trigger-relay.cpp
-        hardware/dht11-sensor.cpp
-        hardware/am2302-sensor.cpp
-        hardware/yf-s201.cpp
         hardware/soil-moisture-sensor.cpp
         hardware/light-sensor.cpp
         config/app-config.cpp
@@ -53,7 +48,6 @@ target_sources(MightyGardenerLib
         hardware/yf-s201.h
         hardware/soil-moisture-sensor.h
         hardware/light-sensor.h
-        hardware/pigpio.h
         communication/serial-port.h
         communication/sms-utils.h
         communication/sms-manager.h
@@ -64,7 +58,17 @@ target_sources(MightyGardenerLib
         config/app-config.h
 )
 
-if(GPIOD_FOUND AND PIGPIO_LIB)
+if(PIGPIO_LIB AND PIGPIO_INCLUDE_DIR)
+    target_sources(MightyGardenerLib PRIVATE
+        hardware/dht11-sensor.cpp
+        hardware/am2302-sensor.cpp
+        hardware/yf-s201.cpp
+    )
+    target_include_directories(MightyGardenerLib PRIVATE ${PIGPIO_INCLUDE_DIR})
+    target_link_libraries(MightyGardenerLib PUBLIC ${PIGPIO_LIB})
+endif()
+
+if(GPIOD_FOUND AND PIGPIO_LIB AND PIGPIO_INCLUDE_DIR)
     add_executable(MightyGardener main.cpp)
     target_link_libraries(MightyGardener PRIVATE MightyGardenerLib)
 else()

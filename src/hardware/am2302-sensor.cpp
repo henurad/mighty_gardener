@@ -5,7 +5,7 @@
 #include <cstdint>
 #include <iostream>
 
-#include "hardware/pigpio.h"
+#include <pigpio.h>
 
 Am2302Sensor::Am2302Sensor(int gpio_pin)
     : gpio_(gpio_pin), data_{}, initialized_(false), monitoring_(false) {}

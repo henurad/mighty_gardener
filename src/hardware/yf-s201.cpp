@@ -5,7 +5,7 @@
 #include <cstdint>
 #include <iostream>
 
-#include "hardware/pigpio.h"
+#include <pigpio.h>
 
 YfS201::YfS201(int gpio_pin)
     : gpio_(gpio_pin), initialized_(false), monitoring_(false) {}

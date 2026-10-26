@@ -5,7 +5,7 @@
 #include <cstdint>
 #include <iostream>
 
-#include "hardware/pigpio.h"
+#include <pigpio.h>
 
 Dht11Sensor::Dht11Sensor(int gpio_pin)
     : gpio_(gpio_pin), data_{}, initialized_(false), monitoring_(false) {}
