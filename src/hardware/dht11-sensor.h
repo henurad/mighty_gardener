@@ -5,6 +5,8 @@
 #include <cstdint>
 #include <thread>
 
+#include "hardware/gpio-line.h"
+
 class Dht11Sensor {
  public:
   explicit Dht11Sensor(int gpio_pin);
@@ -22,7 +24,7 @@ class Dht11Sensor {
   bool Read(float& temperature, float& humidity);
 
  private:
-  int gpio_;
+  GpioLine line_;
   uint8_t data_[5];
   bool initialized_;
   std::atomic<bool> monitoring_;

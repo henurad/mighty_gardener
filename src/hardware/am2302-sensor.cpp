@@ -5,10 +5,12 @@
 #include <cstdint>
 #include <iostream>
 
-#include <pigpio.h>
+#include <chrono>
+#include <thread>
 
 Am2302Sensor::Am2302Sensor(int gpio_pin)
-    : gpio_(gpio_pin), data_{}, initialized_(false), monitoring_(false) {}
+    : line_(gpio_pin, GpioLine::Direction::kInput),
+      data_{}, initialized_(false), monitoring_(false) {}
 
 Am2302Sensor::~Am2302Sensor() {
   StopMonitoring();
@@ -21,8 +23,7 @@ bool Am2302Sensor::Initialize() {
     return true;
   }
 
-  if (gpioInitialise() < 0) {
-    std::cerr << "pigpio initialization failed\n";
+  if (!line_.Open()) {
     return false;
   }
 
@@ -32,7 +33,7 @@ bool Am2302Sensor::Initialize() {
 
 void Am2302Sensor::Shutdown() {
   if (initialized_) {
-    gpioTerminate();
+    line_.Close();
     initialized_ = false;
   }
 }
@@ -77,83 +78,46 @@ void Am2302Sensor::Monitor(int interval_seconds) {
 }
 
 bool Am2302Sensor::Read(float& temperature, float& humidity) {
-  for (int i = 0; i < 5; ++i) {
-    data_[i] = 0;
-  }
+  for (int i = 0; i < 5; ++i) data_[i] = 0;
 
-  // Send start signal.
-  gpioSetMode(gpio_, PI_OUTPUT);
-  gpioWrite(gpio_, 0);
-  gpioDelay(1000);  // 1 ms
+  if (!line_.SetDirection(GpioLine::Direction::kOutput, false)) return false;
+  usleep(1000);
+  if (!line_.SetValue(true)) return false;
+  usleep(40);
+  if (!line_.SetDirection(GpioLine::Direction::kInput)) return false;
 
-  gpioWrite(gpio_, 1);
-  gpioDelay(40);
+  auto wait_level = [this](bool expected) {
+    const auto deadline = std::chrono::steady_clock::now() +
+                          std::chrono::milliseconds(10);
+    bool level = false;
+    do {
+      if (!line_.Read(level)) return false;
+      if (level == expected) return true;
+    } while (std::chrono::steady_clock::now() < deadline);
+    return false;
+  };
 
-  gpioSetMode(gpio_, PI_INPUT);
-
-  // Wait for AM2302 response.
-  uint32_t timeout = 10000;
-
-  while (gpioRead(gpio_) == 1) {
-    if (--timeout == 0) {
-      return false;
-    }
-  }
-
-  timeout = 10000;
-  while (gpioRead(gpio_) == 0) {
-    if (--timeout == 0) {
-      return false;
-    }
-  }
-
-  timeout = 10000;
-  while (gpioRead(gpio_) == 1) {
-    if (--timeout == 0) {
-      return false;
-    }
-  }
-
-  // Read 40 bits.
-  for (int i = 0; i < 40; ++i) {
-    // Wait for LOW.
-    timeout = 10000;
-    while (gpioRead(gpio_) == 0) {
-      if (--timeout == 0) {
-        return false;
-      }
-    }
-
-    const uint32_t start_tick = gpioTick();
-
-    // Wait for HIGH end.
-    timeout = 10000;
-    while (gpioRead(gpio_) == 1) {
-      if (--timeout == 0) {
-        return false;
-      }
-    }
-
-    const uint32_t duration = gpioTick() - start_tick;
-
-    data_[i / 8] <<= 1;
-
-    // >50us means bit 1.
-    if (duration > 50) {
-      data_[i / 8] |= 1;
-    }
-  }
-
-  // Verify checksum.
-  const uint8_t checksum =
-      (data_[0] + data_[1] + data_[2] + data_[3]) & 0xFF;
-
-  if (checksum != data_[4]) {
+  if (!wait_level(false) || !wait_level(true) || !wait_level(false)) {
     return false;
   }
 
-  // AM2302 encodes humidity and temperature as signed 16-bit values scaled
-  // by 10 (e.g. 235 = 23.5%). The temperature MSB is the sign bit.
+  for (int i = 0; i < 40; ++i) {
+    if (!wait_level(true)) return false;
+
+    const auto start = std::chrono::steady_clock::now();
+    if (!wait_level(false)) return false;
+
+    const auto duration = std::chrono::duration_cast<std::chrono::microseconds>(
+                              std::chrono::steady_clock::now() - start)
+                              .count();
+    data_[i / 8] <<= 1;
+    if (duration > 50) data_[i / 8] |= 1;
+  }
+
+  const uint8_t checksum =
+      (data_[0] + data_[1] + data_[2] + data_[3]) & 0xFF;
+  if (checksum != data_[4]) return false;
+
   const int16_t raw_humidity =
       static_cast<int16_t>((data_[0] << 8) | data_[1]);
   int16_t raw_temperature = static_cast<int16_t>((data_[2] << 8) | data_[3]);
@@ -163,6 +127,5 @@ bool Am2302Sensor::Read(float& temperature, float& humidity) {
 
   humidity = raw_humidity / 10.0f;
   temperature = raw_temperature / 10.0f;
-
   return true;
 }

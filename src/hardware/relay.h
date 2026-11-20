@@ -1,9 +1,7 @@
 #ifndef HARDWARE_RELAY_H_
 #define HARDWARE_RELAY_H_
 
-#ifdef HAVE_GPIOD
-#include <gpiod.h>
-#endif
+#include "hardware/gpio-line.h"
 
 class Relay {
  public:
@@ -17,14 +15,7 @@ class Relay {
   void TurnOff();
 
  private:
-#ifdef HAVE_GPIOD
-  gpiod_chip* chip_ = nullptr;
-  gpiod_line* line_ = nullptr;
-#else
-  void* chip_ = nullptr;
-  void* line_ = nullptr;
-#endif
-  int pin_;
+  GpioLine line_;
   bool active_low_;
 };
 

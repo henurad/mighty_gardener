@@ -12,7 +12,7 @@ Install the build tools and the GPIO libraries on the Pi:
 
 ```sh
 sudo apt update
-sudo apt install build-essential cmake libgpiod-dev libpigpio-dev
+sudo apt install build-essential cmake libgpiod-dev
 ```
 
 Build with the hardware backends required. This makes CMake stop with an error
@@ -25,7 +25,7 @@ cmake -S . -B build -DMIGHTY_GARDENER_REQUIRE_HARDWARE=ON \
 cmake --build build -j2
 ```
 
-The relay pins use BCM numbering through libgpiod, and the DHT11 uses pigpio.
+All GPIO pins use BCM numbering through libgpiod 2.2.1. Pigpio is not required.
 Configure the serial console off and the UART on with `raspi-config` before
 using `/dev/serial0` for the GSM module. Run the application with the required
 permissions to access GPIO and the serial device.

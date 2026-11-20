@@ -5,10 +5,12 @@
 #include <cstdint>
 #include <iostream>
 
-#include <pigpio.h>
+#include <chrono>
+#include <thread>
 
 YfS201::YfS201(int gpio_pin)
-    : gpio_(gpio_pin), initialized_(false), monitoring_(false) {}
+    : line_(gpio_pin, GpioLine::Direction::kInput),
+      initialized_(false), monitoring_(false) {}
 
 YfS201::~YfS201() {
   StopMonitoring();
@@ -21,19 +23,17 @@ bool YfS201::Initialize() {
     return true;
   }
 
-  if (gpioInitialise() < 0) {
-    std::cerr << "pigpio initialization failed\n";
+  if (!line_.Open()) {
     return false;
   }
 
-  gpioSetMode(gpio_, PI_INPUT);
   initialized_ = true;
   return true;
 }
 
 void YfS201::Shutdown() {
   if (initialized_) {
-    gpioTerminate();
+    line_.Close();
     initialized_ = false;
   }
 }
@@ -76,23 +76,22 @@ void YfS201::Monitor(int interval_seconds) {
 }
 
 bool YfS201::Read(float& flow_rate_lpm) {
-  const uint32_t start_tick = gpioTick();
-  int last_level = gpioRead(gpio_);
-  uint32_t pulses = 0;
+  const auto start = std::chrono::steady_clock::now();
+  bool last_level = false;
+  if (!line_.Read(last_level)) return false;
 
-  // Count rising edges over a fixed sampling window.
-  while ((gpioTick() - start_tick) < kSampleWindowUs) {
-    const int level = gpioRead(gpio_);
-    if (level == 1 && last_level == 0) {
-      ++pulses;
-    }
+  uint32_t pulses = 0;
+  while (std::chrono::duration_cast<std::chrono::microseconds>(
+             std::chrono::steady_clock::now() - start)
+             .count() < kSampleWindowUs) {
+    bool level = false;
+    if (!line_.Read(level)) return false;
+    if (level && !last_level) ++pulses;
     last_level = level;
   }
 
-  // Pulses per second (Hz) -> litres per minute.
   const float frequency =
       static_cast<float>(pulses) * 1000000.0f / kSampleWindowUs;
   flow_rate_lpm = frequency * 60.0f / kPulsesPerLiter;
-
   return true;
 }

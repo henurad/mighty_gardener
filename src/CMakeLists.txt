@@ -8,7 +8,7 @@ option(MIGHTY_GARDENER_REQUIRE_HARDWARE
 
 find_package(PkgConfig QUIET)
 if(PkgConfig_FOUND)
-    pkg_check_modules(GPIOD QUIET IMPORTED_TARGET libgpiod)
+    pkg_check_modules(GPIOD QUIET IMPORTED_TARGET libgpiod>=2.2.1)
 endif()
 
 if(GPIOD_FOUND)
@@ -16,22 +16,15 @@ if(GPIOD_FOUND)
     target_compile_definitions(MightyGardenerLib PUBLIC HAVE_GPIOD)
 endif()
 
-find_library(PIGPIO_LIB NAMES pigpio)
-find_path(PIGPIO_INCLUDE_DIR NAMES pigpio.h)
-
 if(MIGHTY_GARDENER_REQUIRE_HARDWARE AND NOT GPIOD_FOUND)
     message(FATAL_ERROR
         "libgpiod was not found. Install libgpiod-dev for Raspberry Pi GPIO support.")
 endif()
 
-if(MIGHTY_GARDENER_REQUIRE_HARDWARE AND (NOT PIGPIO_LIB OR NOT PIGPIO_INCLUDE_DIR))
-    message(FATAL_ERROR
-        "pigpio headers or library were not found. Install libpigpio-dev for Raspberry Pi sensor support.")
-endif()
-
 target_sources(MightyGardenerLib
     PRIVATE
         hardware/relay.cpp
+        hardware/gpio-line.cpp
         communication/serial-port.cpp
         communication/sms-utils.cpp
         communication/sms-manager.cpp
@@ -43,6 +36,7 @@ target_sources(MightyGardenerLib
 
     PUBLIC
         hardware/relay.h
+        hardware/gpio-line.h
         hardware/dht11-sensor.h
         hardware/am2302-sensor.h
         hardware/yf-s201.h
@@ -58,17 +52,15 @@ target_sources(MightyGardenerLib
         config/app-config.h
 )
 
-if(PIGPIO_LIB AND PIGPIO_INCLUDE_DIR)
+if(GPIOD_FOUND)
     target_sources(MightyGardenerLib PRIVATE
         hardware/dht11-sensor.cpp
         hardware/am2302-sensor.cpp
         hardware/yf-s201.cpp
     )
-    target_include_directories(MightyGardenerLib PRIVATE ${PIGPIO_INCLUDE_DIR})
-    target_link_libraries(MightyGardenerLib PUBLIC ${PIGPIO_LIB})
 endif()
 
-if(GPIOD_FOUND AND PIGPIO_LIB AND PIGPIO_INCLUDE_DIR)
+if(GPIOD_FOUND)
     add_executable(MightyGardener main.cpp)
     target_link_libraries(MightyGardener PRIVATE MightyGardenerLib)
 else()

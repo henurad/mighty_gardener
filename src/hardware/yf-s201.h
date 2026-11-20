@@ -5,6 +5,8 @@
 #include <cstdint>
 #include <thread>
 
+#include "hardware/gpio-line.h"
+
 /// @todo test this module
 /// @brief YF-S201 flow sensor
 class YfS201 {
@@ -28,7 +30,7 @@ class YfS201 {
   static constexpr float kPulsesPerLiter = 450.0f;
   static constexpr uint32_t kSampleWindowUs = 1000000;
 
-  int gpio_;
+  GpioLine line_;
   bool initialized_;
   std::atomic<bool> monitoring_;
   std::thread yf_s201_thread_;

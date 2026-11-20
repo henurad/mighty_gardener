@@ -5,6 +5,8 @@
 #include <cstdint>
 #include <thread>
 
+#include "hardware/gpio-line.h"
+
 /// @todo: Test this module
 class Am2302Sensor {
  public:
@@ -23,7 +25,7 @@ class Am2302Sensor {
   bool Read(float& temperature, float& humidity);
 
  private:
-  int gpio_;
+  GpioLine line_;
   uint8_t data_[5];
   bool initialized_;
   std::atomic<bool> monitoring_;
